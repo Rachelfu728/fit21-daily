@@ -177,8 +177,11 @@
     color:var(--ink-soft);font-size:24px;position:relative;overflow:hidden;
   }
   .photo-slot img{width:100%;height:100%;object-fit:cover;}
+  .photo-slot.cam,.photo-slot.alb{flex-direction:column;gap:2px;font-size:22px;}
+  .photo-slot.cam span,.photo-slot.alb span{font-size:11px;font-weight:600;}
+  .photo-slot.cam{border-color:var(--leaf);color:var(--leaf);}
   .photo-slot .rm{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;
-    width:20px;height:20px;border-radius:50%;font-size:13px;line-height:20px;text-align:center;}
+    width:20px;height:20px;border-radius:50%;font-size:13px;line-height:20px;text-align:center;z-index:2;}
   .photo-slot input{position:absolute;inset:0;opacity:0;}
   .meal-block{margin-bottom:16px;}
   .meal-block > span{font-size:14px;font-weight:600;display:block;margin-bottom:8px;}
@@ -573,6 +576,12 @@ async function doLogin(){
   } else {
     data = base;
   }
+  // 若本機有今天還沒送出的暫存草稿,優先接回來
+  const draft = loadDraft(currentName, dk);
+  if(draft){
+    data = {...base, ...draft};
+    data.photos = {...base.photos, ...(draft.photos||{})};
+  }
   step = 0;
   $('#who').textContent = currentName;
   $('#today').textContent = prettyDate(now);
@@ -580,6 +589,20 @@ async function doLogin(){
   renderStep();
 }
 function logout(){ currentName=''; $('#loginName').value=''; show('login'); }
+
+/* ---------- 本機自動暫存(填一半離開也不會不見) ---------- */
+function draftKey(name,dk){ return 'draft__'+name+'__'+dk; }
+function saveDraft(){
+  if(!currentName || !data) return;
+  try{ localStorage.setItem(draftKey(currentName,data.dateKey), JSON.stringify(data)); }catch(e){}
+}
+function loadDraft(name,dk){
+  try{ const s=localStorage.getItem(draftKey(name,dk)); return s?JSON.parse(s):null; }catch(e){ return null; }
+}
+function clearDraft(){
+  if(!currentName || !data) return;
+  try{ localStorage.removeItem(draftKey(currentName,data.dateKey)); }catch(e){}
+}
 
 function freshData(dk, now){
   return {
@@ -682,7 +705,8 @@ function photoRow(path, max=0){
   if(!Array.isArray(arr)){ arr=[]; setPath(path,arr); }
   let slots = arr.map((src,i)=>`<div class="photo-slot"><img src="${src}"><div class="rm" onclick="rmPhoto('${path}',${i})">×</div></div>`).join('');
   if(max===0 || arr.length<max){
-    slots += `<label class="photo-slot">＋<input type="file" accept="image/*" onchange="addPhoto('${path}',this)"></label>`;
+    slots += `<label class="photo-slot cam">📷<span>拍照</span><input type="file" accept="image/*" capture="environment" onchange="addPhoto('${path}',this)"></label>`;
+    slots += `<label class="photo-slot alb">🖼️<span>相簿</span><input type="file" accept="image/*" onchange="addPhoto('${path}',this)"></label>`;
   }
   return `<div class="photo-row">${slots}</div>`;
 }
@@ -717,15 +741,16 @@ async function addPhoto(path,input){
   input.disabled=true;
   const dataUrl=await compressImage(file);
   getPath(path).push(dataUrl);
+  saveDraft();
   renderStep();
 }
-function rmPhoto(path,i){ getPath(path).splice(i,1); renderStep(); }
-function bump(key,d,min){ data[key]=Math.max(min,(data[key]??min)+d); $('#v_'+key).textContent=data[key]; }
+function rmPhoto(path,i){ getPath(path).splice(i,1); saveDraft(); renderStep(); }
+function bump(key,d,min){ data[key]=Math.max(min,(data[key]??min)+d); $('#v_'+key).textContent=data[key]; saveDraft(); }
 function setYN(key,val){
-  data[key]=val; renderStep();
+  data[key]=val; saveDraft(); renderStep();
 }
-function setWater(v){ data.water=v; $('#f_water').value=v; renderStep(); }
-function setMood(t){ data.mood=t; renderStep(); }
+function setWater(v){ data.water=v; $('#f_water').value=v; saveDraft(); renderStep(); }
+function setMood(t){ data.mood=t; saveDraft(); renderStep(); }
 
 /* ---------- 跟上一筆比對 ---------- */
 function checkCompare(){
@@ -755,7 +780,7 @@ function bindStep(){
   // 把 input 綁回 data
   const map={f_weight:'weight',f_bodyfat:'bodyfat',f_visceral:'visceral',f_coachQ:'coachQ',f_water:'water',f_snackNote:'snackNote',f_message:'message'};
   Object.entries(map).forEach(([id,key])=>{
-    const el=$('#'+id); if(el) el.addEventListener('input',()=>data[key]=el.value);
+    const el=$('#'+id); if(el) el.addEventListener('input',()=>{ data[key]=el.value; saveDraft(); });
   });
 }
 
@@ -772,6 +797,7 @@ async function submit(){
   data.ts=Date.now();
   try{
     await DB.save(data);
+    clearDraft();
     show('done');
   }catch(err){
     alert('送出失敗,請檢查網路後再試一次');
@@ -791,7 +817,8 @@ function openAsk(){
 function renderAskPhotos(){
   const box=$('#askPhotos');
   let slots = askData.photos.map((src,i)=>`<div class="photo-slot"><img src="${src}"><div class="rm" onclick="rmAskPhoto(${i})">×</div></div>`).join('');
-  slots += `<label class="photo-slot">＋<input type="file" accept="image/*" onchange="addAskPhoto(this)"></label>`;
+  slots += `<label class="photo-slot cam">📷<span>拍照</span><input type="file" accept="image/*" capture="environment" onchange="addAskPhoto(this)"></label>`;
+  slots += `<label class="photo-slot alb">🖼️<span>相簿</span><input type="file" accept="image/*" onchange="addAskPhoto(this)"></label>`;
   box.innerHTML = `<div class="photo-row">${slots}</div>`;
 }
 async function addAskPhoto(input){
