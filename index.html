@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>每日健康紀錄</title>
+<style>
+  :root{
+    --leaf:#5b7a5b;        /* 深葉綠 */
+    --leaf-soft:#e8efe6;   /* 淺葉底 */
+    --clay:#c98a5e;        /* 陶土,提醒/強調 */
+    --ink:#33382f;         /* 墨綠黑,文字 */
+    --ink-soft:#767c6e;    /* 次要文字 */
+    --paper:#f6f4ee;       /* 紙底 */
+    --card:#ffffff;
+    --line:#e0ddd2;
+    --ok:#5b7a5b;
+    --warn:#c98a5e;
+    --radius:18px;
+    --shadow:0 2px 14px rgba(70,80,60,.08);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.6;
+    font-size:16px;
+  }
+  .wrap{max-width:520px;margin:0 auto;min-height:100vh;position:relative;}
+
+  /* ---------- 通用 ---------- */
+  button{font-family:inherit;cursor:pointer;border:none;}
+  input,textarea,select{font-family:inherit;font-size:16px;}
+  .hidden{display:none!important;}
+
+  .btn-main{
+    width:100%;padding:16px;border-radius:var(--radius);
+    background:var(--leaf);color:#fff;font-size:17px;font-weight:600;
+    box-shadow:var(--shadow);
+  }
+  .btn-main:active{transform:scale(.99);}
+  .btn-ghost{
+    width:100%;padding:14px;border-radius:var(--radius);
+    background:transparent;color:var(--leaf);font-size:16px;
+    border:1.5px solid var(--leaf);
+  }
+  .btn-sub{
+    padding:11px 18px;border-radius:14px;background:var(--leaf-soft);
+    color:var(--leaf);font-weight:600;font-size:15px;
+  }
+
+  /* ---------- 登入頁 ---------- */
+  #login{padding:0 24px;display:flex;flex-direction:column;justify-content:center;min-height:100vh;text-align:center;}
+  .brand{margin-bottom:38px;}
+  .brand .leaf-mark{font-size:44px;}
+  .brand h1{font-size:23px;margin:14px 0 4px;letter-spacing:1px;}
+  .brand p{color:var(--ink-soft);margin:0;font-size:15px;}
+  #login input{
+    width:100%;padding:16px;border-radius:var(--radius);border:1.5px solid var(--line);
+    background:var(--card);margin-bottom:14px;text-align:center;
+  }
+  #login input:focus{outline:none;border-color:var(--leaf);}
+  .login-hint{color:var(--ink-soft);font-size:13px;margin-top:22px;}
+
+  /* ---------- 填寫頁 頂部 ---------- */
+  header.top{
+    padding:20px 22px 14px;display:flex;align-items:center;justify-content:space-between;
+    position:sticky;top:0;background:var(--paper);z-index:5;
+  }
+  header.top .hello{font-size:15px;color:var(--ink-soft);}
+  header.top .hello b{color:var(--ink);font-size:17px;font-weight:600;}
+  header.top .date{font-size:13px;color:var(--ink-soft);}
+  .logout{font-size:13px;color:var(--ink-soft);background:none;text-decoration:underline;}
+
+  /* 進度條 */
+  .progress{padding:0 22px 8px;}
+  .bar{height:6px;background:var(--line);border-radius:99px;overflow:hidden;}
+  .bar span{display:block;height:100%;background:var(--leaf);width:0;transition:width .3s;}
+  .step-label{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--ink-soft);}
+
+  /* 快速動作列 */
+  .quick-bar{display:flex;gap:10px;padding:0 18px 4px;}
+  .quick-btn{
+    flex:1;padding:12px 8px;border-radius:14px;font-size:14px;font-weight:600;
+    border:1.5px solid var(--line);background:var(--card);
+  }
+  .quick-btn.ask{border-color:var(--clay);color:var(--clay);background:#fbf3ec;}
+  .quick-btn.hist{color:var(--leaf);}
+  .quick-btn:active{transform:scale(.99);}
+
+  /* 過去紀錄 */
+  .hist-card{background:var(--card);margin:12px 18px;border-radius:16px;padding:16px 18px;box-shadow:var(--shadow);}
+  .hist-card .h-date{font-size:15px;font-weight:600;margin-bottom:8px;}
+  .hist-card .h-stats{font-size:13.5px;color:var(--ink-soft);}
+  .hist-card .h-stats b{color:var(--ink);font-weight:600;}
+  .hist-sec-title{padding:18px 20px 2px;font-size:14px;font-weight:600;color:var(--ink-soft);}
+  .hist-ask{background:#fbf3ec;border:1px solid var(--clay);margin:8px 18px;border-radius:14px;padding:12px 14px;font-size:14px;}
+  .hist-ask .ha-time{font-size:12px;color:var(--ink-soft);margin-bottom:4px;}
+  .hist-ask .thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .hist-ask .thumbs img{width:54px;height:54px;object-fit:cover;border-radius:10px;}
+
+  /* 比對提醒 */
+  .compare-note{background:#fbf3ec;border:1.5px solid var(--clay);border-radius:14px;padding:14px 16px;margin-bottom:4px;}
+  .compare-note .cn-line{font-weight:600;color:var(--clay);font-size:14.5px;margin-bottom:6px;}
+  .compare-note .cn-tip{font-size:14px;color:var(--ink);line-height:1.6;}
+
+  /* 給學員的圖文卡 */
+  .card-preview-wrap{padding:0 18px;display:flex;justify-content:center;}
+  .msg-card{
+    width:100%;max-width:440px;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(201,138,94,.10), transparent 42%),
+      radial-gradient(circle at 85% 90%, rgba(91,122,91,.12), transparent 45%),
+      linear-gradient(155deg,#faf7f1 0%,#eef2ea 55%,#e6ede3 100%);
+    border-radius:26px;
+    padding:0;position:relative;overflow:hidden;
+    box-shadow:0 8px 30px rgba(90,100,70,.14);
+  }
+  /* 外框內描邊 */
+  .msg-card .mc-inner{
+    margin:14px;border:1px solid rgba(91,122,91,.28);border-radius:18px;
+    padding:36px 30px 28px;text-align:center;position:relative;
+  }
+  /* 奶昔+茶 插圖 */
+  .msg-card .mc-illus{display:flex;justify-content:center;align-items:flex-end;gap:14px;margin-bottom:12px;}
+  .msg-card .mc-to{
+    font-size:15px;color:var(--leaf);font-weight:600;margin-bottom:6px;letter-spacing:2px;
+  }
+  .msg-card .mc-to span{color:var(--ink);font-size:19px;}
+  .msg-card .mc-divider{
+    width:44px;height:1.5px;background:var(--clay);opacity:.55;margin:14px auto 20px;border-radius:2px;
+  }
+  .msg-card .mc-body{
+    font-size:18px;line-height:2.05;color:var(--ink);
+    white-space:pre-wrap;word-break:break-word;min-height:56px;
+    padding:6px 6px 0;
+  }
+  .msg-card .mc-sign{
+    margin-top:24px;padding-top:16px;border-top:1px dashed rgba(118,124,110,.35);
+    font-size:14px;color:var(--ink-soft);
+  }
+  .msg-card .mc-sign b{color:var(--leaf);font-weight:600;}
+  .msg-card .mc-brand{font-size:12px;color:var(--ink-soft);letter-spacing:1px;margin-top:4px;}
+  .msg-card .mc-date{position:absolute;top:16px;right:18px;font-size:11px;color:var(--ink-soft);opacity:.8;}
+
+  /* 卡片 */
+  .card{
+    background:var(--card);margin:14px 18px;border-radius:var(--radius);
+    padding:22px 20px;box-shadow:var(--shadow);
+  }
+  .card h2{font-size:19px;margin:0 0 4px;display:flex;align-items:center;gap:8px;}
+  .card .sub{color:var(--ink-soft);font-size:13.5px;margin:0 0 18px;}
+
+  .field{margin-bottom:18px;}
+  .field:last-child{margin-bottom:0;}
+  .field label{display:block;font-size:15px;font-weight:600;margin-bottom:8px;}
+  .field .unit{color:var(--ink-soft);font-weight:400;font-size:13px;}
+  .num-input{
+    width:100%;padding:14px;border-radius:14px;border:1.5px solid var(--line);
+    background:var(--paper);
+  }
+  .num-input:focus{outline:none;border-color:var(--leaf);background:#fff;}
+
+  /* 照片上傳格 */
+  .photo-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
+  .photo-slot{
+    width:78px;height:78px;border-radius:14px;border:1.5px dashed var(--line);
+    background:var(--paper);display:flex;align-items:center;justify-content:center;
+    color:var(--ink-soft);font-size:24px;position:relative;overflow:hidden;
+  }
+  .photo-slot img{width:100%;height:100%;object-fit:cover;}
+  .photo-slot .rm{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;
+    width:20px;height:20px;border-radius:50%;font-size:13px;line-height:20px;text-align:center;}
+  .photo-slot input{position:absolute;inset:0;opacity:0;}
+  .meal-block{margin-bottom:16px;}
+  .meal-block > span{font-size:14px;font-weight:600;display:block;margin-bottom:8px;}
+
+  /* 計步器 +/- */
+  .stepper{display:flex;align-items:center;gap:0;border:1.5px solid var(--line);border-radius:14px;overflow:hidden;width:fit-content;}
+  .stepper button{width:48px;height:48px;background:var(--leaf-soft);color:var(--leaf);font-size:22px;font-weight:600;}
+  .stepper .val{width:56px;text-align:center;font-size:18px;font-weight:600;}
+
+  /* 是/否 切換 */
+  .toggle-group{display:flex;gap:10px;}
+  .toggle-group button{
+    flex:1;padding:13px;border-radius:14px;border:1.5px solid var(--line);
+    background:var(--paper);color:var(--ink-soft);font-size:15px;font-weight:600;
+  }
+  .toggle-group button.on-yes{background:var(--leaf);color:#fff;border-color:var(--leaf);}
+  .toggle-group button.on-no{background:#efe7df;color:var(--clay);border-color:var(--clay);}
+
+  /* 水量快選 */
+  .chips{display:flex;gap:8px;flex-wrap:wrap;}
+  .chips button{
+    padding:11px 15px;border-radius:99px;border:1.5px solid var(--line);
+    background:var(--paper);color:var(--ink-soft);font-size:14px;font-weight:600;
+  }
+  .chips button.on{background:var(--leaf);color:#fff;border-color:var(--leaf);}
+
+  /* 心情 */
+  .moods{display:flex;justify-content:space-between;gap:6px;}
+  .moods button{
+    flex:1;padding:12px 4px;border-radius:14px;border:1.5px solid var(--line);
+    background:var(--paper);font-size:26px;
+  }
+  .moods button .m-txt{display:block;font-size:11px;margin-top:4px;color:var(--ink-soft);}
+  .moods button.on{border-color:var(--leaf);background:var(--leaf-soft);}
+
+  textarea{
+    width:100%;padding:14px;border-radius:14px;border:1.5px solid var(--line);
+    background:var(--paper);min-height:90px;resize:vertical;
+  }
+  textarea:focus{outline:none;border-color:var(--leaf);background:#fff;}
+
+  .nav-btns{display:flex;gap:12px;padding:8px 18px 34px;}
+  .nav-btns .btn-ghost{flex:0 0 34%;}
+  .nav-btns .btn-main{flex:1;}
+
+  /* 提醒教練那格 醒目 */
+  .ask-coach{border:1.5px solid var(--clay);background:#fbf3ec;}
+  .ask-coach h2 .tag{font-size:12px;background:var(--clay);color:#fff;padding:2px 9px;border-radius:99px;font-weight:600;}
+
+  /* 完成頁 */
+  #done{padding:60px 30px;text-align:center;display:flex;flex-direction:column;justify-content:center;min-height:100vh;}
+  #done .big{font-size:56px;}
+  #done h2{font-size:23px;margin:16px 0 6px;}
+  #done p{color:var(--ink-soft);margin:0 0 30px;}
+
+  /* ---------- 後台 ---------- */
+  #admin{padding-bottom:40px;}
+  .admin-head{padding:22px 20px 6px;}
+  .admin-head h1{font-size:21px;margin:0 0 4px;}
+  .admin-head p{color:var(--ink-soft);font-size:13.5px;margin:0;}
+  .admin-tools{display:flex;gap:8px;padding:12px 20px;flex-wrap:wrap;}
+  .admin-tools input{flex:1;min-width:140px;padding:11px 14px;border-radius:12px;border:1.5px solid var(--line);background:#fff;}
+  .client-card{
+    background:var(--card);margin:10px 18px;border-radius:16px;padding:16px 18px;box-shadow:var(--shadow);
+  }
+  .client-card .cc-head{display:flex;justify-content:space-between;align-items:center;}
+  .client-card .cc-name{font-size:17px;font-weight:600;}
+  .client-card .cc-date{font-size:12px;color:var(--ink-soft);}
+  .client-card .flag{background:var(--clay);color:#fff;font-size:11px;padding:2px 8px;border-radius:99px;margin-left:6px;}
+  .cc-stats{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;}
+  .cc-stats .s{font-size:13px;color:var(--ink-soft);}
+  .cc-stats .s b{display:block;font-size:17px;color:var(--ink);font-weight:600;}
+  .cc-detail{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:14px;display:none;}
+  .cc-detail.open{display:block;}
+  .cc-detail .row{margin-bottom:10px;}
+  .cc-detail .row .k{color:var(--ink-soft);font-size:12.5px;}
+  .cc-detail .thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+  .cc-detail .thumbs img{width:60px;height:60px;object-fit:cover;border-radius:10px;}
+  .cc-detail .coach-q{background:#fbf3ec;border-radius:12px;padding:10px 12px;margin-top:6px;border:1px solid var(--clay);}
+  .expand{font-size:13px;color:var(--leaf);background:none;margin-top:12px;text-decoration:underline;}
+  .empty{text-align:center;color:var(--ink-soft);padding:50px 20px;font-size:14px;}
+
+  .mode-switch{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;font-size:12px;padding:8px 16px;border-radius:99px;opacity:.85;z-index:50;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===================== 登入 ===================== -->
+  <section id="login">
+    <div class="brand">
+      <div class="leaf-mark">🌿</div>
+      <h1>每日健康紀錄</h1>
+      <p>今天也好好照顧自己</p>
+    </div>
+    <input id="loginName" placeholder="輸入你的姓名" autocomplete="off">
+    <button class="btn-main" onclick="doLogin()">開始今天的紀錄</button>
+    <p class="login-hint">教練請輸入「後台」進入管理頁</p>
+  </section>
+
+  <!-- ===================== 填寫 ===================== -->
+  <section id="form" class="hidden">
+    <header class="top">
+      <div class="hello">你好,<b id="who">—</b></div>
+      <div style="text-align:right">
+        <div class="date" id="today">—</div>
+        <button class="logout" onclick="logout()">登出</button>
+      </div>
+    </header>
+    <div class="quick-bar">
+      <button class="quick-btn ask" onclick="openAsk()">🙋 臨時問教練這餐</button>
+      <button class="quick-btn hist" onclick="openHistory()">📅 看過去紀錄</button>
+    </div>
+    <div class="progress">
+      <div class="bar"><span id="barFill"></span></div>
+      <div class="step-label"><span id="stepName">今日數據</span><span id="stepNum">1 / 7</span></div>
+    </div>
+
+    <div id="steps"></div>
+
+    <div class="nav-btns">
+      <button class="btn-ghost" id="prevBtn" onclick="prevStep()">上一步</button>
+      <button class="btn-main" id="nextBtn" onclick="nextStep()">下一步</button>
+    </div>
+  </section>
+
+  <!-- ===================== 完成 ===================== -->
+  <section id="done" class="hidden">
+    <div class="big">🌱</div>
+    <h2>今天完成了!</h2>
+    <p>紀錄已送給教練,明天見。</p>
+    <button class="btn-ghost" onclick="logout()" style="max-width:260px;margin:0 auto;">回首頁</button>
+  </section>
+
+  <!-- ===================== 臨時問教練 ===================== -->
+  <section id="ask" class="hidden">
+    <header class="top">
+      <div class="hello">臨時問教練</div>
+      <button class="logout" onclick="backToForm()">返回</button>
+    </header>
+    <div class="card ask-coach">
+      <h2>🙋 這餐可以吃嗎?</h2>
+      <p class="sub">隨時拍、隨時問。這裡送出的每一則教練都會單獨看到,不影響你今天的完整紀錄</p>
+      <div class="field"><label>餐點照片</label><div id="askPhotos"></div></div>
+      <div class="field"><label>想問的話</label>
+        <textarea id="askText" placeholder="例:這個便當可以吃嗎?份量會不會太多?"></textarea></div>
+    </div>
+    <div class="nav-btns">
+      <button class="btn-ghost" onclick="backToForm()" style="flex:0 0 34%">返回</button>
+      <button class="btn-main" onclick="submitAsk()">送給教練</button>
+    </div>
+  </section>
+
+  <!-- ===================== 問教練 完成 ===================== -->
+  <section id="askdone" class="hidden">
+    <div class="big">📩</div>
+    <h2>已經送給教練了!</h2>
+    <p>教練看到會盡快回覆你。</p>
+    <div style="max-width:280px;margin:0 auto;display:flex;flex-direction:column;gap:12px">
+      <button class="btn-ghost" onclick="openAsk()">再問一餐</button>
+      <button class="btn-main" onclick="backToForm()">回到今日紀錄</button>
+    </div>
+  </section>
+
+  <!-- ===================== 過去紀錄 ===================== -->
+  <section id="history" class="hidden">
+    <header class="top">
+      <div class="hello">過去紀錄</div>
+      <button class="logout" onclick="backToForm()">返回</button>
+    </header>
+    <div id="historyList"></div>
+  </section>
+
+  <!-- ===================== 後台 ===================== -->
+  <section id="admin" class="hidden">
+    <div class="admin-head">
+      <h1>教練後台</h1>
+      <p>今天的客戶紀錄總覽</p>
+    </div>
+    <div class="admin-tools">
+      <input id="search" placeholder="搜尋客戶姓名" oninput="renderAdmin()">
+      <button class="btn-sub" onclick="openCompose()">✍️ 寫給學員的話</button>
+      <button class="btn-sub" onclick="changePw()">修改密碼</button>
+      <button class="btn-sub" onclick="logout()">離開</button>
+    </div>
+    <div id="clientList"></div>
+  </section>
+
+  <!-- ===================== 寫給學員 圖文卡 ===================== -->
+  <section id="compose" class="hidden">
+    <header class="top">
+      <div class="hello">寫給學員的話</div>
+      <button class="logout" onclick="backToAdmin()">返回後台</button>
+    </header>
+    <div class="card">
+      <div class="field"><label>學員名字</label>
+        <input class="num-input" id="c_name" list="nameList" placeholder="輸入或選擇學員" oninput="renderCard()">
+        <datalist id="nameList"></datalist></div>
+      <div class="field"><label>想說的話</label>
+        <textarea id="c_msg" placeholder="寫下你想對她說的鼓勵、提醒或肯定…" oninput="renderCard()" style="min-height:120px"></textarea></div>
+    </div>
+
+    <div class="card-preview-wrap">
+      <div id="cardCanvas" class="msg-card">
+        <div class="mc-inner">
+          <div class="mc-date" id="mc-date"></div>
+          <div class="mc-illus">
+            <svg viewBox="0 0 60 80" width="46" height="61" xmlns="http://www.w3.org/2000/svg" aria-label="奶昔">
+              <!-- 奶昔杯 -->
+              <path d="M14 26 L46 26 L42 74 Q41 78 37 78 L23 78 Q19 78 18 74 Z" fill="#f3ece2" stroke="#c98a5e" stroke-width="2"/>
+              <!-- 奶昔內容 -->
+              <path d="M16 34 L44 34 L41 70 Q40.5 74 37 74 L23 74 Q19.5 74 19 70 Z" fill="#e7d3bf"/>
+              <!-- 上方奶油 -->
+              <ellipse cx="30" cy="26" rx="16" ry="5" fill="#fbf6ef" stroke="#c98a5e" stroke-width="2"/>
+              <path d="M22 24 Q26 14 30 22 Q34 12 38 24" fill="none" stroke="#c98a5e" stroke-width="2" stroke-linecap="round"/>
+              <!-- 櫻桃 -->
+              <circle cx="30" cy="14" r="4" fill="#b0654e"/>
+              <path d="M30 10 Q33 5 36 6" fill="none" stroke="#5b7a5b" stroke-width="1.6" stroke-linecap="round"/>
+              <!-- 吸管 -->
+              <line x1="38" y1="8" x2="44" y2="34" stroke="#5b7a5b" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <svg viewBox="0 0 70 70" width="52" height="52" xmlns="http://www.w3.org/2000/svg" aria-label="茶">
+              <!-- 熱氣 -->
+              <path d="M28 12 Q24 8 28 4" fill="none" stroke="#a9b6a0" stroke-width="2" stroke-linecap="round"/>
+              <path d="M36 12 Q32 8 36 4" fill="none" stroke="#a9b6a0" stroke-width="2" stroke-linecap="round"/>
+              <!-- 杯身 -->
+              <path d="M14 22 L52 22 L48 52 Q46 60 38 60 L28 60 Q20 60 18 52 Z" fill="#f3ece2" stroke="#5b7a5b" stroke-width="2"/>
+              <!-- 茶水 -->
+              <ellipse cx="33" cy="24" rx="17" ry="4" fill="#cdb892"/>
+              <!-- 把手 -->
+              <path d="M52 28 Q64 30 60 42 Q58 48 50 46" fill="none" stroke="#5b7a5b" stroke-width="2.2" stroke-linecap="round"/>
+              <!-- 底盤 -->
+              <ellipse cx="33" cy="63" rx="22" ry="4" fill="#e7ddcb" stroke="#5b7a5b" stroke-width="1.6"/>
+            </svg>
+          </div>
+          <div class="mc-to">給　<span id="mc-name">—</span></div>
+          <div class="mc-divider"></div>
+          <div class="mc-body" id="mc-body">在這裡預覽你想說的話…</div>
+          <div class="mc-sign">— <b>Rachel 教練</b>
+            <div class="mc-brand">遇見喜樂 · 陪你每一天</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-btns" style="flex-direction:column;gap:12px;padding-bottom:40px">
+      <button class="btn-main" onclick="downloadCard()">下載圖片</button>
+      <button class="btn-ghost" onclick="copyCardText()">複製文字</button>
+    </div>
+  </section>
+
+</div>
+
+<div class="mode-switch" id="modeTag">雲端連線中…</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<!-- 圖片產生 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+/* =========================================================
+   Firebase 設定 —— Rachel 的 fit21 專案
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBxzH_uYYZtgQ_QuG30Olg_bLzag1WbLIM",
+  authDomain: "fit21-3741a.firebaseapp.com",
+  databaseURL: "https://fit21-3741a-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "fit21-3741a",
+  storageBucket: "fit21-3741a.firebasestorage.app",
+  messagingSenderId: "177610672979",
+  appId: "1:177610672979:web:c4a89766f29ad2f878efa6"
+};
+firebase.initializeApp(firebaseConfig);
+const fdb = firebase.database();
+
+/* 連線狀態顯示 */
+fdb.ref('.info/connected').on('value', s=>{
+  const tag=document.getElementById('modeTag');
+  if(s.val()){ tag.textContent='☁️ 已連上雲端'; tag.style.background='#5b7a5b'; }
+  else { tag.textContent='雲端連線中…'; tag.style.background='#33382f'; }
+});
+
+/* =========================================================
+   資料儲存層 —— 改用 Firebase Realtime Database(即時、多客戶)
+   照片壓縮後直接存進資料庫,不需綁定信用卡開通 Storage
+   ========================================================= */
+const DB = {
+  async save(entry){
+    // 同一人同一天 → 用固定 key 覆蓋
+    const key = entry.name + '__' + entry.dateKey;
+    await fdb.ref('entries/'+safeKey(key)).set(entry);
+  },
+  async today(name, dateKey){
+    const snap = await fdb.ref('entries/'+safeKey(name+'__'+dateKey)).get();
+    return snap.exists() ? snap.val() : null;
+  },
+  async allToday(dateKey){
+    const snap = await fdb.ref('entries').get();
+    if(!snap.exists()) return [];
+    return Object.values(snap.val()).filter(e=>e.dateKey===dateKey).sort((a,b)=>b.ts-a.ts);
+  },
+  async history(name){
+    const snap = await fdb.ref('entries').get();
+    if(!snap.exists()) return [];
+    return Object.values(snap.val()).filter(e=>e.name===name).sort((a,b)=>b.ts-a.ts);
+  },
+  async saveAsk(entry){
+    await fdb.ref('asks').push(entry);
+  },
+  async asksToday(dateKey){
+    const snap = await fdb.ref('asks').get();
+    if(!snap.exists()) return [];
+    return Object.values(snap.val()).filter(e=>e.dateKey===dateKey).sort((a,b)=>b.ts-a.ts);
+  },
+  async asksHistory(name){
+    const snap = await fdb.ref('asks').get();
+    if(!snap.exists()) return [];
+    return Object.values(snap.val()).filter(e=>e.name===name).sort((a,b)=>b.ts-a.ts);
+  }
+};
+// Firebase key 不能有 . # $ [ ] / ,把姓名等轉成安全字串
+function safeKey(s){ return encodeURIComponent(s).replace(/\./g,'%2E'); }
+
+/* 照片壓縮 —— 縮到最長邊 900px、JPEG 品質 0.6,存進資料庫剛好 */
+function compressImage(file, maxSize=900, quality=0.6){
+  return new Promise((resolve)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        let {width,height}=img;
+        if(width>height && width>maxSize){ height=height*maxSize/width; width=maxSize; }
+        else if(height>maxSize){ width=width*maxSize/height; height=maxSize; }
+        const c=document.createElement('canvas'); c.width=width; c.height=height;
+        c.getContext('2d').drawImage(img,0,0,width,height);
+        resolve(c.toDataURL('image/jpeg',quality));
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------- 工具 ---------- */
+const $ = s=>document.querySelector(s);
+const show = id => { ['login','form','done','admin','ask','askdone','history','compose'].forEach(x=>$('#'+x).classList.add('hidden')); $('#'+id).classList.remove('hidden'); };
+function dateKeyOf(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function prettyDate(d){ const wd=['日','一','二','三','四','五','六']; return `${d.getMonth()+1}月${d.getDate()}日 (週${wd[d.getDay()]})`; }
+
+let currentName = '';
+let step = 0;
+let data = {};   // 當前填寫暫存
+let prevRecord = null;  // 上一筆紀錄,用來比對
+
+const STEP_META = [
+  {name:'今日數據'},{name:'飲食照片'},{name:'想問教練的餐'},
+  {name:'計畫執行'},{name:'身體狀況'},{name:'飲食誠實區'},{name:'心情與回饋'}
+];
+
+/* ---------- 登入 ---------- */
+const DEFAULT_ADMIN_PW = "Myfit210728.";
+async function getAdminPw(){
+  try{
+    const snap = await fdb.ref('config/adminPw').get();
+    return snap.exists() ? snap.val() : DEFAULT_ADMIN_PW;
+  }catch(e){ return DEFAULT_ADMIN_PW; }
+}
+async function doLogin(){
+  const v = $('#loginName').value.trim();
+  if(!v){ $('#loginName').focus(); return; }
+  if(v==='後台' || v.toLowerCase()==='admin'){
+    const pw = prompt('請輸入教練密碼:');
+    if(pw===null) return;
+    const real = await getAdminPw();
+    if(pw!==real){ alert('密碼不對'); return; }
+    show('admin'); renderAdmin(); return;
+  }
+  currentName = v;
+  const now = new Date();
+  const dk = dateKeyOf(now);
+  const existing = await DB.today(currentName, dk);
+  // 抓最近一筆「不是今天」的紀錄,用來比對
+  const hist = await DB.history(currentName);
+  prevRecord = hist.find(e=>e.dateKey!==dk) || null;
+  const base = freshData(dk, now);
+  if(existing){
+    data = {...base, ...existing};
+    data.photos = {...base.photos, ...(existing.photos||{})};
+  } else {
+    data = base;
+  }
+  step = 0;
+  $('#who').textContent = currentName;
+  $('#today').textContent = prettyDate(now);
+  show('form');
+  renderStep();
+}
+function logout(){ currentName=''; $('#loginName').value=''; show('login'); }
+
+function freshData(dk, now){
+  return {
+    name:'', dateKey:dk, ts:now.getTime(),
+    weight:'', bodyfat:'', visceral:'',
+    mWeight:[], mBodyfat:[], mVisceral:[],
+    photos:{breakfast:[],lunch:[],dinner:[],other:[]},
+    coachPhotos:[], coachQ:'',
+    shake:0, tabletDone:null, water:'',
+    poop:null, poopTimes:1,
+    snack:null, snackNote:'',
+    mood:'', message:''
+  };
+}
+
+/* ---------- 步驟渲染 ---------- */
+function renderStep(){
+  const m = STEP_META[step];
+  $('#stepName').textContent = m.name;
+  $('#stepNum').textContent = `${step+1} / 7`;
+  $('#barFill').style.width = ((step+1)/7*100)+'%';
+  $('#prevBtn').style.visibility = step===0 ? 'hidden':'visible';
+  $('#nextBtn').textContent = step===6 ? '完成送出' : '下一步';
+
+  const wrap = $('#steps');
+  wrap.innerHTML = STEPS[step]();
+  bindStep();
+  if(step===0) checkCompare();
+  window.scrollTo(0,0);
+}
+
+const STEPS = [
+  // 0 今日數據
+  ()=>`<div class="card"><h2>📊 今日數據</h2><p class="sub">早上量的最準,填你今天量到的數字。照片選填,一格放一張</p>
+    <div class="field"><label>體重 <span class="unit">公斤</span></label>
+      <input class="num-input" type="number" inputmode="decimal" id="f_weight" value="${data.weight}" placeholder="例:58.5" oninput="checkCompare()">
+      ${photoRow('mWeight',1)}</div>
+    <div class="field"><label>體脂肪 <span class="unit">%</span></label>
+      <input class="num-input" type="number" inputmode="decimal" id="f_bodyfat" value="${data.bodyfat}" placeholder="例:26.3" oninput="checkCompare()">
+      ${photoRow('mBodyfat',1)}</div>
+    <div class="field"><label>內臟脂肪</label>
+      <input class="num-input" type="number" inputmode="decimal" id="f_visceral" value="${data.visceral}" placeholder="例:7" oninput="checkCompare()">
+      ${photoRow('mVisceral',1)}</div>
+    <div id="compareBox"></div>
+  </div>`,
+
+  // 1 飲食照片
+  ()=>`<div class="card"><h2>🍽️ 飲食照片</h2><p class="sub">今天吃的、喝的都拍下來,包含奶昔和茶,每一項都要。每餐可放多張</p>
+    ${mealBlock('早餐','breakfast')}
+    ${mealBlock('午餐','lunch')}
+    ${mealBlock('晚餐','dinner')}
+    ${mealBlock('奶昔・茶・其他','other')}
+  </div>`,
+
+  // 2 想問教練的餐
+  ()=>`<div class="card ask-coach"><h2>🙋 想問教練的餐 <span class="tag">選填</span></h2>
+    <p class="sub">有想馬上問「這餐可以吃嗎?」就放這裡,教練會優先看</p>
+    ${photoRow('coachPhotos')}
+    <div class="field" style="margin-top:14px"><label>想問的話</label>
+      <textarea id="f_coachQ" placeholder="例:這個便當的份量會太多嗎?">${data.coachQ}</textarea></div>
+  </div>`,
+
+  // 3 計畫執行
+  ()=>`<div class="card"><h2>✅ 計畫執行</h2><p class="sub">今天有沒有照計畫做</p>
+    <div class="field"><label>奶昔喝了幾杯</label>${stepper('shake')}</div>
+    <div class="field"><label>錠片吃了嗎</label>${yesno('tabletDone','有吃完','還沒')}</div>
+    <div class="field"><label>喝水量 <span class="unit">c.c.</span></label>
+      ${waterChips()}
+      <input class="num-input" type="number" inputmode="numeric" id="f_water" value="${data.water}" placeholder="或直接輸入 c.c." style="margin-top:10px"></div>
+  </div>`,
+
+  // 4 身體狀況
+  ()=>`<div class="card"><h2>💧 身體狀況</h2><p class="sub">身體的訊號也很重要</p>
+    <div class="field"><label>今天有排便嗎</label>${yesno('poop','有','沒有')}</div>
+    <div class="field" id="poopTimesField" ${data.poop===true?'':'style="display:none"'}>
+      <label>排了幾次</label>${stepper('poopTimes',1)}</div>
+  </div>`,
+
+  // 5 飲食誠實區
+  ()=>`<div class="card"><h2>🤫 飲食誠實區</h2><p class="sub">誠實就是進步的開始,不用有壓力</p>
+    <div class="field"><label>今天有沒有吃零食或計畫外的東西</label>${yesno('snack','有','沒有')}</div>
+    <div class="field" id="snackNoteField" ${data.snack===true?'':'style="display:none"'}>
+      <label>吃了什麼</label><textarea id="f_snackNote" placeholder="例:下午茶吃了一塊蛋糕">${data.snackNote}</textarea></div>
+  </div>`,
+
+  // 6 心情與回饋
+  ()=>`<div class="card"><h2>💛 心情與回饋</h2><p class="sub">今天過得怎麼樣?</p>
+    <div class="field"><label>今天的心情</label>${moods()}</div>
+    <div class="field"><label>想對教練說的話</label>
+      <textarea id="f_message" placeholder="任何想說的都可以…">${data.message}</textarea></div>
+  </div>`
+];
+
+/* ---------- 小元件 ---------- */
+function mealBlock(label,key){
+  return `<div class="meal-block"><span>${label}</span>${photoRow('photos.'+key)}</div>`;
+}
+function photoRow(path, max=0){
+  let arr = getPath(path);
+  if(!Array.isArray(arr)){ arr=[]; setPath(path,arr); }
+  let slots = arr.map((src,i)=>`<div class="photo-slot"><img src="${src}"><div class="rm" onclick="rmPhoto('${path}',${i})">×</div></div>`).join('');
+  if(max===0 || arr.length<max){
+    slots += `<label class="photo-slot">＋<input type="file" accept="image/*" onchange="addPhoto('${path}',this)"></label>`;
+  }
+  return `<div class="photo-row">${slots}</div>`;
+}
+function stepper(key,min=0){
+  const v = data[key]??min;
+  return `<div class="stepper">
+    <button onclick="bump('${key}',-1,${min})">－</button>
+    <div class="val" id="v_${key}">${v}</div>
+    <button onclick="bump('${key}',1,${min})">＋</button></div>`;
+}
+function yesno(key,yes,no){
+  const v = data[key];
+  return `<div class="toggle-group">
+    <button class="${v===true?'on-yes':''}" onclick="setYN('${key}',true)">${yes}</button>
+    <button class="${v===false?'on-no':''}" onclick="setYN('${key}',false)">${no}</button></div>`;
+}
+function waterChips(){
+  const opts=[500,1000,1500,2000,2500];
+  return `<div class="chips">${opts.map(o=>`<button class="${String(data.water)==String(o)?'on':''}" onclick="setWater(${o})">${o}</button>`).join('')}</div>`;
+}
+function moods(){
+  const opts=[['😄','很好'],['🙂','還不錯'],['😐','普通'],['😔','有點累'],['😣','不太好']];
+  return `<div class="moods">${opts.map(([e,t])=>`<button class="${data.mood===t?'on':''}" onclick="setMood('${t}')">${e}<span class="m-txt">${t}</span></button>`).join('')}</div>`;
+}
+
+/* ---------- 元件互動 ---------- */
+function getPath(path){ if(path.includes('.')){const[a,b]=path.split('.');return data[a][b];} return data[path]; }
+function setPath(path,val){ if(path.includes('.')){const[a,b]=path.split('.');data[a][b]=val;} else data[path]=val; }
+
+async function addPhoto(path,input){
+  const file=input.files[0]; if(!file)return;
+  input.disabled=true;
+  const dataUrl=await compressImage(file);
+  getPath(path).push(dataUrl);
+  renderStep();
+}
+function rmPhoto(path,i){ getPath(path).splice(i,1); renderStep(); }
+function bump(key,d,min){ data[key]=Math.max(min,(data[key]??min)+d); $('#v_'+key).textContent=data[key]; }
+function setYN(key,val){
+  data[key]=val; renderStep();
+}
+function setWater(v){ data.water=v; $('#f_water').value=v; renderStep(); }
+function setMood(t){ data.mood=t; renderStep(); }
+
+/* ---------- 跟上一筆比對 ---------- */
+function checkCompare(){
+  const box=$('#compareBox'); if(!box) return;
+  if(!prevRecord){ box.innerHTML=''; return; }
+  const items=[
+    {key:'f_weight', prev:prevRecord.weight, label:'體重', unit:'公斤'},
+    {key:'f_bodyfat', prev:prevRecord.bodyfat, label:'體脂肪', unit:'%'},
+    {key:'f_visceral', prev:prevRecord.visceral, label:'內臟脂肪', unit:''}
+  ];
+  const ups=[];
+  items.forEach(it=>{
+    const el=$('#'+it.key); if(!el) return;
+    const now=parseFloat(el.value); const was=parseFloat(it.prev);
+    if(!isNaN(now) && !isNaN(was) && now>was){
+      ups.push(`${it.label}比上次多了 ${(now-was).toFixed(1)}${it.unit}`);
+    }
+  });
+  if(ups.length===0){ box.innerHTML=''; return; }
+  box.innerHTML=`<div class="compare-note">
+    <div class="cn-line">${ups.join('、')}。</div>
+    <div class="cn-tip">沒關係,回想一下昨天吃了什麼、水分有沒有喝足夠,明天再調整就好 🌿</div>
+  </div>`;
+}
+
+function bindStep(){
+  // 把 input 綁回 data
+  const map={f_weight:'weight',f_bodyfat:'bodyfat',f_visceral:'visceral',f_coachQ:'coachQ',f_water:'water',f_snackNote:'snackNote',f_message:'message'};
+  Object.entries(map).forEach(([id,key])=>{
+    const el=$('#'+id); if(el) el.addEventListener('input',()=>data[key]=el.value);
+  });
+}
+
+/* ---------- 步驟切換 ---------- */
+function nextStep(){
+  if(step<6){ step++; renderStep(); }
+  else submit();
+}
+function prevStep(){ if(step>0){ step--; renderStep(); } }
+
+async function submit(){
+  const btn=$('#nextBtn'); btn.disabled=true; btn.textContent='送出中…';
+  data.name=currentName;
+  data.ts=Date.now();
+  try{
+    await DB.save(data);
+    show('done');
+  }catch(err){
+    alert('送出失敗,請檢查網路後再試一次');
+    btn.disabled=false; btn.textContent='完成送出';
+  }
+}
+
+/* ---------- 臨時問教練 ---------- */
+let askData = null;
+function backToForm(){ show('form'); renderStep(); }
+function openAsk(){
+  askData = { photos:[], text:'' };
+  show('ask');
+  renderAskPhotos();
+  const t=$('#askText'); t.value=''; t.oninput=()=>askData.text=t.value;
+}
+function renderAskPhotos(){
+  const box=$('#askPhotos');
+  let slots = askData.photos.map((src,i)=>`<div class="photo-slot"><img src="${src}"><div class="rm" onclick="rmAskPhoto(${i})">×</div></div>`).join('');
+  slots += `<label class="photo-slot">＋<input type="file" accept="image/*" onchange="addAskPhoto(this)"></label>`;
+  box.innerHTML = `<div class="photo-row">${slots}</div>`;
+}
+async function addAskPhoto(input){
+  const file=input.files[0]; if(!file)return;
+  input.disabled=true;
+  const dataUrl=await compressImage(file);
+  askData.photos.push(dataUrl); renderAskPhotos();
+}
+function rmAskPhoto(i){ askData.photos.splice(i,1); renderAskPhotos(); }
+async function submitAsk(){
+  if(!askData.photos.length && !askData.text.trim()){ alert('拍一張照片或寫一句話再送出'); return; }
+  const now=new Date();
+  try{
+    await DB.saveAsk({
+      name:currentName, dateKey:dateKeyOf(now), ts:now.getTime(),
+      photos:askData.photos, text:askData.text.trim()
+    });
+    show('askdone');
+  }catch(err){ alert('送出失敗,請檢查網路後再試一次'); }
+}
+
+/* ---------- 過去紀錄(客戶自己看) ---------- */
+async function openHistory(){
+  show('history');
+  const box=$('#historyList');
+  box.innerHTML=`<div class="empty">載入中…</div>`;
+  const recs = await DB.history(currentName);
+  const asks = await DB.asksHistory(currentName);
+  let html='';
+  html+=`<div class="hist-sec-title">每日紀錄</div>`;
+  if(recs.length===0){ html+=`<div class="empty">還沒有紀錄</div>`; }
+  else html+=recs.map(e=>{
+    const d=new Date(e.ts);
+    return `<div class="hist-card">
+      <div class="h-date">${e.dateKey.replace(/-/g,'/')}</div>
+      <div class="h-stats">體重 <b>${e.weight||'—'}</b>・體脂 <b>${e.bodyfat||'—'}</b>・內臟脂肪 <b>${e.visceral||'—'}</b>・奶昔 <b>${e.shake||0} 杯</b>・心情 <b>${e.mood||'—'}</b></div>
+    </div>`;
+  }).join('');
+  html+=`<div class="hist-sec-title">臨時問教練</div>`;
+  if(asks.length===0){ html+=`<div class="empty">還沒有問過</div>`; }
+  else html+=asks.map(a=>{
+    const d=new Date(a.ts);
+    const tm=`${a.dateKey.replace(/-/g,'/')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const ap=Array.isArray(a.photos)?a.photos:[];
+    return `<div class="hist-ask">
+      <div class="ha-time">${tm}</div>
+      ${a.text?`<div>${a.text}</div>`:''}
+      ${ap.length?`<div class="thumbs">${ap.map(s=>`<img src="${s}">`).join('')}</div>`:''}
+    </div>`;
+  }).join('');
+  box.innerHTML=html;
+}
+
+/* ---------- 修改密碼 ---------- */
+async function changePw(){
+  const cur = await getAdminPw();
+  const old = prompt('請輸入目前的密碼:');
+  if(old===null) return;
+  if(old!==cur){ alert('目前密碼不對'); return; }
+  const n1 = prompt('請輸入新密碼:');
+  if(n1===null || !n1.trim()) return;
+  const n2 = prompt('再輸入一次新密碼:');
+  if(n2===null) return;
+  if(n1!==n2){ alert('兩次輸入不一樣,請重來'); return; }
+  try{
+    await fdb.ref('config/adminPw').set(n1);
+    alert('密碼已更新!下次進後台請用新密碼。');
+  }catch(e){ alert('更新失敗,請檢查網路後再試'); }
+}
+
+/* ---------- 寫給學員的圖文卡 ---------- */
+function backToAdmin(){ show('admin'); renderAdmin(); }
+async function openCompose(){
+  show('compose');
+  $('#c_name').value=''; $('#c_msg').value='';
+  renderCard();
+  try{
+    const snap = await fdb.ref('entries').get();
+    const names = new Set();
+    if(snap.exists()) Object.values(snap.val()).forEach(e=>{ if(e.name) names.add(e.name); });
+    $('#nameList').innerHTML = [...names].map(n=>`<option value="${n}">`).join('');
+  }catch(e){}
+}
+function renderCard(){
+  const name = $('#c_name').value.trim();
+  const msg = $('#c_msg').value.trim();
+  $('#mc-name').textContent = name || '—';
+  $('#mc-body').textContent = msg || '在這裡預覽你想說的話…';
+  const d=new Date();
+  $('#mc-date').textContent = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+}
+async function downloadCard(){
+  const name = $('#c_name').value.trim();
+  if(!name && !$('#c_msg').value.trim()){ alert('先填名字和想說的話'); return; }
+  const el = $('#cardCanvas');
+  try{
+    const canvas = await html2canvas(el, {scale:2, backgroundColor:null});
+    const link = document.createElement('a');
+    link.download = `給${name||'學員'}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }catch(e){ alert('產生圖片失敗,請再試一次'); }
+}
+function copyCardText(){
+  const name = $('#c_name').value.trim();
+  const msg = $('#c_msg').value.trim();
+  if(!msg){ alert('先寫想說的話'); return; }
+  const text = `給 ${name}\n\n${msg}\n\n— Rachel 教練`;
+  navigator.clipboard.writeText(text).then(
+    ()=>alert('文字已複製,可以貼到 LINE 了'),
+    ()=>alert('複製失敗,請手動選取')
+  );
+}
+
+/* ---------- 後台 ---------- */
+async function renderAdmin(){
+  const dk = dateKeyOf(new Date());
+  const q = ($('#search')?.value||'').trim();
+  const box = $('#clientList');
+  if(!box.dataset.loaded){ box.innerHTML=`<div class="empty">載入中…</div>`; }
+  let list = await DB.allToday(dk);
+  let asks = await DB.asksToday(dk);
+  box.dataset.loaded='1';
+  if(q){ list = list.filter(e=>e.name.includes(q)); asks = asks.filter(e=>e.name.includes(q)); }
+  let html='';
+
+  // 臨時問教練 —— 放最上面,提醒優先回覆
+  html+=`<div class="hist-sec-title" style="padding-top:6px">🙋 臨時問教練 ${asks.length?`(${asks.length})`:''}</div>`;
+  if(asks.length===0){ html+=`<div class="empty" style="padding:20px">目前沒有待回覆的問餐</div>`; }
+  else html+=asks.map(a=>{
+    const t=new Date(a.ts); const tm=String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
+    const ap=Array.isArray(a.photos)?a.photos:[];
+    return `<div class="client-card" style="border:1.5px solid var(--clay)">
+      <div class="cc-head"><div class="cc-name">${a.name} <span class="flag">要回覆</span></div><div class="cc-date">${tm}</div></div>
+      ${a.text?`<div style="margin-top:10px;font-size:14.5px">${a.text}</div>`:''}
+      ${ap.length?`<div class="thumbs" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${ap.map(s=>`<img src="${s}" style="width:70px;height:70px;object-fit:cover;border-radius:10px">`).join('')}</div>`:''}
+    </div>`;
+  }).join('');
+
+  // 每日紀錄
+  html+=`<div class="hist-sec-title">📋 今日每日紀錄 ${list.length?`(${list.length})`:''}</div>`;
+  if(list.length===0){ html+=`<div class="empty" style="padding:20px">今天還沒有客戶填寫紀錄</div>`; }
+  else html+=list.map((e,idx)=>clientCard(e,idx)).join('');
+
+  box.innerHTML = html;
+}
+function clientCard(e,idx){
+  const t=new Date(e.ts); const time=String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
+  const ph=e.photos||{};
+  const A=x=>Array.isArray(x)?x:[];
+  const hasCoachQ = A(e.coachPhotos).length || e.coachQ;
+  const snackFlag = e.snack===true;
+  const allPhotos=[...A(ph.breakfast),...A(ph.lunch),...A(ph.dinner),...A(ph.other)];
+  return `<div class="client-card">
+    <div class="cc-head">
+      <div class="cc-name">${e.name}
+        ${hasCoachQ?'<span class="flag">要回覆</span>':''}
+        ${snackFlag?'<span class="flag" style="background:#a58b5c">有偷吃</span>':''}
+      </div>
+      <div class="cc-date">${time} 填寫</div>
+    </div>
+    <div class="cc-stats">
+      <div class="s">體重<b>${e.weight||'—'}</b></div>
+      <div class="s">體脂<b>${e.bodyfat||'—'}</b></div>
+      <div class="s">內臟脂肪<b>${e.visceral||'—'}</b></div>
+      <div class="s">奶昔<b>${e.shake||0} 杯</b></div>
+      <div class="s">心情<b>${e.mood||'—'}</b></div>
+    </div>
+    <button class="expand" onclick="this.nextElementSibling.classList.toggle('open')">看完整紀錄 ▾</button>
+    <div class="cc-detail">
+      ${hasCoachQ?`<div class="coach-q"><div class="k">🙋 想問教練的餐</div>
+        ${e.coachQ?`<div>${e.coachQ}</div>`:''}
+        ${A(e.coachPhotos).length?`<div class="thumbs">${A(e.coachPhotos).map(s=>`<img src="${s}">`).join('')}</div>`:''}</div>`:''}
+      <div class="row"><span class="k">量測數據</span><div>體重 ${e.weight||'—'}・體脂 ${e.bodyfat||'—'}・內臟脂肪 ${e.visceral||'—'}</div>
+        ${(()=>{const mp=[...A(e.mPhotos),...A(e.mWeight),...A(e.mBodyfat),...A(e.mVisceral)];return mp.length?`<div class="thumbs">${mp.map(s=>`<img src="${s}">`).join('')}</div>`:'';})()}</div>
+      <div class="row"><span class="k">飲食照片</span>
+        ${allPhotos.length?`<div class="thumbs">${allPhotos.map(s=>`<img src="${s}">`).join('')}</div>`:'<div>無</div>'}</div>
+      <div class="row"><span class="k">計畫</span><div>奶昔 ${e.shake||0} 杯・錠片 ${e.tabletDone===true?'✅ 完成':e.tabletDone===false?'❌ 未完成':'—'}・喝水 ${e.water||'—'} c.c.</div></div>
+      <div class="row"><span class="k">排便</span><div>${e.poop===true?'有,'+(e.poopTimes||1)+' 次':e.poop===false?'沒有':'—'}</div></div>
+      <div class="row"><span class="k">誠實區</span><div>${e.snack===true?'有:'+(e.snackNote||'(未填)'):e.snack===false?'沒有':'—'}</div></div>
+      <div class="row"><span class="k">想說的話</span><div>${e.message||'—'}</div></div>
+    </div>
+  </div>`;
+}
+
+/* ---------- 後台即時更新 ---------- */
+// 只要雲端資料有變,而且教練正在看後台,就自動重新整理
+function watchAdmin(){
+  const refresh=()=>{ if(!$('#admin').classList.contains('hidden')) renderAdmin(); };
+  fdb.ref('entries').on('value', refresh);
+  fdb.ref('asks').on('value', refresh);
+}
+watchAdmin();
+
+/* ---------- 啟動 ---------- */
+show('login');
+</script>
+</body>
+</html>
